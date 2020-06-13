@@ -121,12 +121,25 @@ public class MultiOutput<K, V> extends CommandOutput<K, V, TransactionResult> {
     public void setError(ByteBuffer error) {
 
         if (discarded == null) {
-            super.setError(error);
+            super.setError(buildErrorMessage(error));
             return;
         }
 
         CommandOutput<K, V, ?> output = queue.isEmpty() ? this : queue.peek().getOutput();
         output.setError(decodeAscii(error));
+    }
+
+    private String buildErrorMessage(ByteBuffer errorBuffer) {
+        StringBuilder error = new StringBuilder(decodeAscii(errorBuffer));
+        for (RedisCommand<K, V, ?> command : queue) {
+            CommandOutput<K, V, ?> output = command.getOutput();
+            if(output !=null && output.hasError()){
+                error.append("\n")
+                        .append(command.getType()).append(" : ")
+                        .append(output.error);
+            }
+        }
+        return error.toString();
     }
 
     @Override
